@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import './App.css';
-import type { FamilyTree, Person, Union } from './types/koseki';
-import { emptyTree, fullName } from './types/koseki';
+import type { FamilyTree, Union } from './types/koseki';
+import { emptyTree } from './types/koseki';
 import { sampleTree } from './data/sample';
 import { computeLayout, isLayoutError } from './lib/layout';
 import { exportSvg } from './lib/exportSvg';
-import { exportMermaid } from './lib/exportMermaid';
 import { exportJson, parseTree, downloadText } from './lib/io';
 import * as ops from './lib/ops';
 import type { EditorActions } from './lib/actions';
@@ -31,11 +30,9 @@ function loadInitial(): FamilyTree {
 export default function App() {
   const [tree, setTree] = useState<FamilyTree>(loadInitial);
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
-  const [rootId, setRootId] = useState<string | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
   const [editorWidth, setEditorWidth] = useState(420);
   const [message, setMessage] = useState<string | null>(null);
-  const [showMermaid, setShowMermaid] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -46,42 +43,39 @@ export default function App() {
     }
   }, [tree]);
 
-  const layout = useMemo(() => computeLayout(tree, rootId), [tree, rootId]);
+  const layout = useMemo(() => computeLayout(tree), [tree]);
 
   const notify = (msg: string) => {
     setMessage(msg);
     window.setTimeout(() => setMessage(null), 3000);
   };
 
-  // Callbacks that create a person also select the new one for editing.
   const applyNew = (result: ops.TreeAndId) => {
     setTree(result.tree);
     setSelectedId(result.newId);
   };
 
   const actions: EditorActions = {
-    updatePerson: (id: string, patch: Partial<Person>) =>
-      setTree(ops.updatePerson(tree, id, patch)),
-    deletePerson: (id: string) => {
+    updatePerson: (id, patch) => setTree(ops.updatePerson(tree, id, patch)),
+    deletePerson: (id) => {
       setTree(ops.deletePerson(tree, id));
       if (selectedId === id) setSelectedId(undefined);
     },
     addStandalone: () => applyNew(ops.addStandalone(tree)),
-    addParent: (id: string) => applyNew(ops.addNewParent(tree, id)),
-    addSpouse: (id: string) => applyNew(ops.addNewSpouse(tree, id)),
-    addSibling: (id: string) => applyNew(ops.addNewSibling(tree, id)),
-    addChild: (id: string, unionId?: string) => applyNew(ops.addNewChild(tree, id, unionId)),
-    canAddParent: (id: string) => ops.canAddParent(tree, id),
-    linkSpouse: (id: string, spouseId: string) =>
-      setTree(ops.linkExistingSpouse(tree, id, spouseId)),
-    linkChild: (unionId: string, childId: string) =>
-      setTree(ops.linkExistingChild(tree, unionId, childId)),
-    updateUnion: (id: string, patch: Partial<Union>) =>
-      setTree(ops.updateUnion(tree, id, patch)),
-    deleteUnion: (id: string) => setTree(ops.deleteUnion(tree, id)),
-    removeChild: (unionId: string, childId: string) =>
-      setTree(ops.removeChild(tree, unionId, childId)),
+    addParent: (id) => applyNew(ops.addNewParent(tree, id)),
+    addSpouse: (id) => applyNew(ops.addNewSpouse(tree, id)),
+    addSibling: (id) => applyNew(ops.addNewSibling(tree, id)),
+    addChild: (id, unionId) => applyNew(ops.addNewChild(tree, id, unionId)),
+    canAddParent: (id) => ops.canAddParent(tree, id),
+    linkSpouse: (id, spouseId) => setTree(ops.linkExistingSpouse(tree, id, spouseId)),
+    linkChild: (unionId, childId) => setTree(ops.linkExistingChild(tree, unionId, childId)),
+    updateUnion: (id: string, patch: Partial<Union>) => setTree(ops.updateUnion(tree, id, patch)),
+    deleteUnion: (id) => setTree(ops.deleteUnion(tree, id)),
+    removeChild: (unionId, childId) => setTree(ops.removeChild(tree, unionId, childId)),
   };
+
+  const setTitle = (title: string) =>
+    setTree({ ...tree, meta: { ...tree.meta, title } });
 
   const handleImport = (file: File) => {
     const reader = new FileReader();
@@ -90,8 +84,7 @@ export default function App() {
       if (res.ok) {
         setTree(res.tree);
         setSelectedId(undefined);
-        setRootId(undefined);
-        notify('JSON を読み込みました。');
+        notify('家系図データを読み込みました。');
       } else {
         notify(`読み込み失敗: ${res.error}`);
       }
@@ -99,18 +92,47 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  const downloadSvg = () => {
-    if (isLayoutError(layout)) return notify(layout.error);
-    downloadText('kakeizu.svg', exportSvg(layout, tree), 'image/svg+xml;charset=utf-8');
-  };
   const downloadJson = () =>
-    downloadText('kakeizu.json', exportJson(tree), 'application/json;charset=utf-8');
+    downloadText('家系図データ.json', exportJson(tree), 'application/json;charset=utf-8');
 
-  const mermaidText = useMemo(() => exportMermaid(tree), [tree]);
+  // Save the tree as a PNG image (rendered from the same SVG one-pager).
+  const downloadImage = () => {
+    if (isLayoutError(layout)) return notify(layout.error);
+    const svg = exportSvg(layout, tree);
+    const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    img.onload = () => {
+      const scale = 2; // crisp output
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth * scale;
+      canvas.height = img.naturalHeight * scale;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        return notify('画像の生成に失敗しました。');
+      }
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((b) => {
+        if (!b) return notify('画像の生成に失敗しました。');
+        const u = URL.createObjectURL(b);
+        const a = document.createElement('a');
+        a.href = u;
+        a.download = '家系図.png';
+        a.click();
+        URL.revokeObjectURL(u);
+      }, 'image/png');
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      notify('画像の生成に失敗しました。');
+    };
+    img.src = url;
+  };
 
   const clampZoom = (z: number) => Math.min(2, Math.max(0.3, Math.round(z * 100) / 100));
 
-  // Drag the divider to resize the editor pane (min width enforced).
   const startResize = (e: ReactPointerEvent) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -132,64 +154,37 @@ export default function App() {
     <div className="app">
       <header className="toolbar">
         <div className="brand">
-          <strong>戸籍 → 家系図</strong>
+          <input
+            className="title-input"
+            value={tree.meta?.title ?? ''}
+            placeholder="（家系図のタイトルを入力）"
+            aria-label="家系図のタイトル"
+            onChange={(e) => setTitle(e.target.value)}
+          />
           <span className="sub">ローカル完結・データは外部送信されません</span>
         </div>
         <div className="actions">
-          <button type="button" onClick={() => fileRef.current?.click()}>JSON 読込</button>
+          <button type="button" onClick={() => fileRef.current?.click()}>家系図データを開く</button>
           <input ref={fileRef} type="file" accept="application/json,.json" hidden
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) handleImport(f);
               e.target.value = '';
             }} />
-          <button type="button" onClick={downloadJson}>JSON 保存</button>
-          <button type="button" onClick={downloadSvg}>SVG 書き出し</button>
-          <button type="button" onClick={() => setShowMermaid((v) => !v)}>Mermaid</button>
+          <button type="button" onClick={downloadJson}>家系図データを保存</button>
+          <button type="button" onClick={downloadImage}>画像保存</button>
           <span className="spacer" />
-          <label className="root-select">ルート
-            <select value={rootId ?? (isLayoutError(layout) ? '' : layout.rootId)}
-              onChange={(e) => setRootId(e.target.value || undefined)}>
-              {tree.persons.map((p) => (
-                <option key={p.id} value={p.id}>{fullName(p)}</option>
-              ))}
-            </select>
-          </label>
-          <button type="button"
-            onClick={() => {
-              setTree(sampleTree);
-              setSelectedId(undefined);
-              setRootId(undefined);
-              notify('サンプルを読み込みました。');
-            }}>サンプル</button>
           <button type="button" className="danger"
             onClick={() => {
               if (confirm('すべての人物・関係を消去します。よろしいですか？')) {
                 setTree(emptyTree());
                 setSelectedId(undefined);
-                setRootId(undefined);
               }
             }}>全消去</button>
         </div>
       </header>
 
       {message && <div className="toast">{message}</div>}
-
-      {showMermaid && (
-        <div className="mermaid-panel">
-          <div className="mermaid-head">
-            <span>Mermaid テキスト（mermaid.live などに貼り付け）</span>
-            <button type="button"
-              onClick={() => {
-                navigator.clipboard?.writeText(mermaidText);
-                notify('Mermaid をコピーしました。');
-              }}>コピー</button>
-            <button type="button" onClick={() => downloadText('kakeizu.mmd', mermaidText)}>.mmd 保存</button>
-            <button type="button" className="link" onClick={() => setShowMermaid(false)}>閉じる</button>
-          </div>
-          <textarea readOnly value={mermaidText} spellCheck={false} />
-        </div>
-      )}
 
       <main className="workspace">
         <section className="tree-pane">
@@ -213,18 +208,14 @@ export default function App() {
               onAddSpouse={actions.addSpouse}
               onAddSibling={actions.addSibling}
               onAddChild={actions.addChild}
+              onDelete={actions.deletePerson}
               canAddParent={actions.canAddParent}
             />
           )}
         </section>
         <div className="resizer" onPointerDown={startResize} title="ドラッグで幅を調整" />
         <aside className="editor-pane" style={{ width: editorWidth }}>
-          <Editor
-            tree={tree}
-            selectedId={selectedId}
-            onSelect={setSelectedId}
-            actions={actions}
-          />
+          <Editor tree={tree} selectedId={selectedId} onSelect={setSelectedId} actions={actions} />
         </aside>
       </main>
     </div>

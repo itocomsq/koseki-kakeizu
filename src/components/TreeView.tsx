@@ -42,6 +42,7 @@ interface Props {
   onAddSpouse: (id: string) => void;
   onAddSibling: (id: string) => void;
   onAddChild: (id: string) => void;
+  onDelete: (id: string) => void;
   canAddParent: (id: string) => boolean;
 }
 
@@ -107,15 +108,32 @@ export function TreeView(props: Props) {
           })}
 
           {selected && (
-            <AddButtons
-              left={selected.left + PAD}
-              top={selected.top + PAD}
-              showParent={canAddParent(selected.id)}
-              onParent={() => props.onAddParent(selected.id)}
-              onSpouse={() => props.onAddSpouse(selected.id)}
-              onSibling={() => props.onAddSibling(selected.id)}
-              onChild={() => props.onAddChild(selected.id)}
-            />
+            <>
+              <AddButtons
+                left={selected.left + PAD}
+                top={selected.top + PAD}
+                showParent={canAddParent(selected.id)}
+                onParent={() => props.onAddParent(selected.id)}
+                onSpouse={() => props.onAddSpouse(selected.id)}
+                onSibling={() => props.onAddSibling(selected.id)}
+                onChild={() => props.onAddChild(selected.id)}
+              />
+              <button
+                type="button"
+                className="node-delete"
+                title="この人物を削除"
+                aria-label="この人物を削除"
+                style={{ left: selected.left + PAD + BOX_W - 11, top: selected.top + PAD - 11 }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (confirm(`「${fullName(selected.person)}」を削除しますか？`)) {
+                    props.onDelete(selected.id);
+                  }
+                }}
+              >
+                ×
+              </button>
+            </>
           )}
         </div>
       </div>

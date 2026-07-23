@@ -105,11 +105,11 @@ function PersonDetail(props: {
           <input value={person.givenName ?? ''} onChange={(e) => change({ givenName: e.target.value })} />
         </label>
         <label>氏 ふりがな
-          <input value={person.familyNameKana ?? ''} placeholder="たなか"
+          <input value={person.familyNameKana ?? ''}
             onChange={(e) => change({ familyNameKana: e.target.value })} />
         </label>
         <label>名 ふりがな
-          <input value={person.givenNameKana ?? ''} placeholder="たろう"
+          <input value={person.givenNameKana ?? ''}
             onChange={(e) => change({ givenNameKana: e.target.value })} />
         </label>
         <label>性別
@@ -122,7 +122,7 @@ function PersonDetail(props: {
         <label>続柄
           <input value={person.relationInRegister ?? ''} placeholder="長男 / 妻 など"
             onChange={(e) => change({ relationInRegister: e.target.value })} />
-          {relationSuggestion && relationSuggestion !== person.relationInRegister && (
+          {relationSuggestion && !person.relationInRegister && (
             <button type="button" className="suggest"
               title="生年と家系図から推定。クリックで入力"
               onClick={() => change({ relationInRegister: relationSuggestion })}>
@@ -213,16 +213,24 @@ function PersonDetail(props: {
 
       {/* Secondary: link people that already exist */}
       <details className="link-existing">
-        <summary>既存の人物とつなぐ</summary>
+        <summary>既にいる人物と関係をつなぐ</summary>
         <div className="link-existing-body">
-          <PickPerson label="配偶者にする…" tree={tree}
+          <PickPerson label={`選んだ人を「${displayName(person)}」の配偶者にする`} tree={tree}
             exclude={[person.id, ...myUnions.flatMap((u) => u.partnerIds)]}
             onPick={(id) => actions.linkSpouse(person.id, id)} />
-          {myUnions.map((u) => (
-            <PickPerson key={u.id} label="この夫婦の子にする…" tree={tree}
-              exclude={[person.id, ...u.partnerIds, ...u.childIds]}
-              onPick={(id) => actions.linkChild(u.id, id)} />
-          ))}
+          {myUnions.map((u) => {
+            const spouseNames = u.partnerIds
+              .map((id) => {
+                const pp = tree.persons.find((p) => p.id === id);
+                return pp ? displayName(pp) : '?';
+              })
+              .join('・');
+            return (
+              <PickPerson key={u.id} label={`選んだ人を「${spouseNames}」夫婦の子にする`} tree={tree}
+                exclude={[person.id, ...u.partnerIds, ...u.childIds]}
+                onPick={(id) => actions.linkChild(u.id, id)} />
+            );
+          })}
         </div>
       </details>
     </div>
