@@ -1,6 +1,28 @@
 import type { WheelEvent } from 'react';
 import { BOX_W, BOX_H, type Layout } from '../lib/layout';
-import { fullName, formatDate } from '../types/koseki';
+import { fullName, formatDate, type Person } from '../types/koseki';
+
+/** Name with furigana as ruby (renders correctly in vertical writing mode). */
+function NameWithRuby({ person }: { person: Person }) {
+  const { familyName, givenName, familyNameKana, givenNameKana } = person;
+  if (!familyName && !givenName) return <>{fullName(person)}</>;
+  return (
+    <>
+      {familyName && (
+        <ruby>
+          {familyName}
+          {familyNameKana && <rt>{familyNameKana}</rt>}
+        </ruby>
+      )}
+      {givenName && (
+        <ruby>
+          {givenName}
+          {givenNameKana && <rt>{givenNameKana}</rt>}
+        </ruby>
+      )}
+    </>
+  );
+}
 
 interface Props {
   layout: Layout;
@@ -65,7 +87,7 @@ export function TreeView(props: Props) {
                 onClick={() => onSelect(n.id)}
               >
                 {p.relationInRegister && <span className="node-rel">{p.relationInRegister}</span>}
-                <span className="node-name">{fullName(p)}</span>
+                <span className="node-name"><NameWithRuby person={p} /></span>
                 {(birth || death) && (
                   <span className="node-dates">
                     {birth && <span>{birth}</span>}

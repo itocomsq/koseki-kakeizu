@@ -104,6 +104,14 @@ function PersonDetail(props: {
         <label>名
           <input value={person.givenName ?? ''} onChange={(e) => change({ givenName: e.target.value })} />
         </label>
+        <label>氏 ふりがな
+          <input value={person.familyNameKana ?? ''} placeholder="たなか"
+            onChange={(e) => change({ familyNameKana: e.target.value })} />
+        </label>
+        <label>名 ふりがな
+          <input value={person.givenNameKana ?? ''} placeholder="たろう"
+            onChange={(e) => change({ givenNameKana: e.target.value })} />
+        </label>
         <label>性別
           <select value={person.sex} onChange={(e) => change({ sex: e.target.value as Sex })}>
             {(['male', 'female', 'unknown'] as Sex[]).map((s) => (

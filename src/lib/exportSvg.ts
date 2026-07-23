@@ -3,7 +3,7 @@
 // correctly anywhere.
 
 import type { FamilyTree } from '../types/koseki';
-import { fullName, formatDate } from '../types/koseki';
+import { fullName, fullNameKana, formatDate } from '../types/koseki';
 import { BOX_W, BOX_H, type Layout } from './layout';
 
 const PAD = 40;
@@ -48,6 +48,7 @@ export function exportSvg(layout: Layout, tree: FamilyTree): string {
       const y = n.top + PAD;
       const sex = p.sex;
       const name = esc(fullName(p));
+      const kana = esc(fullNameKana(p));
       const birth = esc(formatDate(p.birth));
       const death = esc(formatDate(p.death));
       const rel = p.relationInRegister ? esc(p.relationInRegister) : '';
@@ -70,7 +71,8 @@ export function exportSvg(layout: Layout, tree: FamilyTree): string {
         fill="${FILL[sex]}" stroke="${STROKE[sex]}" stroke-width="1.25" />
       <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${BOX_W}" height="4" rx="2" fill="${STROKE[sex]}" />
       ${rel ? `<text x="${cx.toFixed(1)}" y="${(y + 18).toFixed(1)}" class="rel" text-anchor="middle">${rel}</text>` : ''}
-      <text x="${cx.toFixed(1)}" y="${(y + 26).toFixed(1)}" class="name">${name}</text>
+      <text x="${(kana ? cx - 6 : cx).toFixed(1)}" y="${(y + 26).toFixed(1)}" class="name">${name}</text>
+      ${kana ? `<text x="${(cx + 11).toFixed(1)}" y="${(y + 26).toFixed(1)}" class="kana">${kana}</text>` : ''}
       ${dateSvg}
     </g>`;
     })
@@ -81,6 +83,7 @@ export function exportSvg(layout: Layout, tree: FamilyTree): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w.toFixed(0)}" height="${h.toFixed(0)}" viewBox="0 0 ${w.toFixed(0)} ${h.toFixed(0)}" font-family="'Hiragino Kaku Gothic ProN','Yu Gothic',Meiryo,sans-serif">
   <style>
     .name { font-size: 18px; font-weight: 600; fill: #1a1a1a; writing-mode: vertical-rl; letter-spacing: 1px; }
+    .kana { font-size: 8px; fill: #555; writing-mode: vertical-rl; letter-spacing: 1px; }
     .date { font-size: 10px; fill: #555; }
     .rel  { font-size: 10px; fill: #888; }
     line  { stroke: #9aa0a6; stroke-width: 1.5; }

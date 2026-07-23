@@ -96,6 +96,8 @@ body.resizing { cursor: col-resize; user-select: none; }
   white-space: nowrap;               /* 一列に固定（改行させない） */
   font-size: 18px; font-weight: 600; color: #1a1a1a; letter-spacing: 1px;
 }
+.node .node-name rt { font-size: 8px; font-weight: 400; color: #555; }
+.node .node-name ruby { ruby-align: center; }
 .node .node-dates {
   position: absolute; bottom: 5px; left: 0; right: 0;
   display: flex; flex-direction: column; align-items: center;

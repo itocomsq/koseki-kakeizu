@@ -26,6 +26,8 @@ function parsePerson(v: unknown, index: number): Person {
     id: v.id,
     familyName: typeof v.familyName === 'string' ? v.familyName : undefined,
     givenName: typeof v.givenName === 'string' ? v.givenName : undefined,
+    familyNameKana: typeof v.familyNameKana === 'string' ? v.familyNameKana : undefined,
+    givenNameKana: typeof v.givenNameKana === 'string' ? v.givenNameKana : undefined,
     sex: asSex(v.sex),
     birth: isObject(v.birth) ? (v.birth as Person['birth']) : undefined,
     death: isObject(v.death) ? (v.death as Person['death']) : undefined,

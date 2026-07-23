@@ -30,6 +30,10 @@ export interface Person {
   familyName?: string;
   /** 名 */
   givenName?: string;
+  /** 氏のふりがな */
+  familyNameKana?: string;
+  /** 名のふりがな */
+  givenNameKana?: string;
   sex: Sex;
   birth?: DateInfo;
   death?: DateInfo;
@@ -90,6 +94,13 @@ export function emptyTree(): FamilyTree {
 export function fullName(p: Pick<Person, 'familyName' | 'givenName'>): string {
   const name = `${p.familyName ?? ''} ${p.givenName ?? ''}`.trim();
   return name.length > 0 ? name : '(名前未設定)';
+}
+
+/** Display helper: full furigana reading, or '' if none recorded. */
+export function fullNameKana(
+  p: Pick<Person, 'familyNameKana' | 'givenNameKana'>,
+): string {
+  return `${p.familyNameKana ?? ''} ${p.givenNameKana ?? ''}`.trim();
 }
 
 /** Split an ISO date (possibly partial) into year / month / day strings. */
