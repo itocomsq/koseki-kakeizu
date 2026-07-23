@@ -98,6 +98,8 @@ body.resizing { cursor: col-resize; user-select: none; }
 }
 .node .node-name rt { font-size: 8px; font-weight: 400; color: #555; }
 .node .node-name ruby { ruby-align: center; }
+/* Furigana-only (no kanji): show the reading, muted, so it's clearly a reading. */
+.node .node-name .kana-only { font-size: 13px; font-weight: 400; color: #6b7078; }
 .node .node-dates {
   position: absolute; bottom: 5px; left: 0; right: 0;
   display: flex; flex-direction: column; align-items: center;

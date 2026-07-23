@@ -2,24 +2,32 @@ import type { WheelEvent } from 'react';
 import { BOX_W, BOX_H, type Layout } from '../lib/layout';
 import { fullName, formatDate, type Person } from '../types/koseki';
 
+/** One name part: kanji with ruby furigana, or — when no kanji is recorded —
+ * the reading shown on its own in a muted "kana-only" style so it's clearly
+ * just a reading. */
+function NamePart({ kanji, kana }: { kanji?: string; kana?: string }) {
+  if (kanji) {
+    return (
+      <ruby>
+        {kanji}
+        {kana && <rt>{kana}</rt>}
+      </ruby>
+    );
+  }
+  if (kana) return <span className="kana-only">{kana}</span>;
+  return null;
+}
+
 /** Name with furigana as ruby (renders correctly in vertical writing mode). */
 function NameWithRuby({ person }: { person: Person }) {
   const { familyName, givenName, familyNameKana, givenNameKana } = person;
-  if (!familyName && !givenName) return <>{fullName(person)}</>;
+  if (!familyName && !givenName && !familyNameKana && !givenNameKana) {
+    return <>{fullName(person)}</>;
+  }
   return (
     <>
-      {familyName && (
-        <ruby>
-          {familyName}
-          {familyNameKana && <rt>{familyNameKana}</rt>}
-        </ruby>
-      )}
-      {givenName && (
-        <ruby>
-          {givenName}
-          {givenNameKana && <rt>{givenNameKana}</rt>}
-        </ruby>
-      )}
+      <NamePart kanji={familyName} kana={familyNameKana} />
+      <NamePart kanji={givenName} kana={givenNameKana} />
     </>
   );
 }

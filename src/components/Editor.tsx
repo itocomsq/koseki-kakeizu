@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { DateInfo, FamilyTree, Person, Sex, UnionType } from '../types/koseki';
-import { fullName, dateParts, isoFromParts } from '../types/koseki';
+import { displayName, dateParts, isoFromParts } from '../types/koseki';
 import { suggestRelation } from '../lib/ops';
 import type { EditorActions } from '../lib/actions';
 
@@ -23,7 +23,7 @@ export function Editor({ tree, selectedId, onSelect, actions }: Props) {
 
   const personName = useMemo(() => {
     const map = new Map<string, string>();
-    for (const p of tree.persons) map.set(p.id, fullName(p));
+    for (const p of tree.persons) map.set(p.id, displayName(p));
     return map;
   }, [tree.persons]);
 
@@ -62,7 +62,7 @@ export function Editor({ tree, selectedId, onSelect, actions }: Props) {
                 onClick={() => onSelect(p.id)}
               >
                 <span className={`dot sex-${p.sex}`} />
-                {fullName(p)}
+                {displayName(p)}
               </button>
             </li>
           ))}
@@ -90,7 +90,7 @@ function PersonDetail(props: {
   return (
     <div className="editor-section detail">
       <div className="editor-head">
-        <h2>{fullName(person)} を編集</h2>
+        <h2>{displayName(person)} を編集</h2>
         <button type="button" className="danger" onClick={() => actions.deletePerson(person.id)}>
           削除
         </button>
@@ -271,7 +271,7 @@ function PickPerson(props: {
     <select className="pick" value="" onChange={(e) => { if (e.target.value) props.onPick(e.target.value); }}>
       <option value="">{props.label}</option>
       {options.map((p) => (
-        <option key={p.id} value={p.id}>{fullName(p)}</option>
+        <option key={p.id} value={p.id}>{displayName(p)}</option>
       ))}
     </select>
   );

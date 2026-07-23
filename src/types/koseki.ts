@@ -103,6 +103,14 @@ export function fullNameKana(
   return `${p.familyNameKana ?? ''} ${p.givenNameKana ?? ''}`.trim();
 }
 
+/** Best available label: kanji name, else the reading (kana-only), else placeholder. */
+export function displayName(p: Person): string {
+  const kanji = `${p.familyName ?? ''} ${p.givenName ?? ''}`.trim();
+  if (kanji) return kanji;
+  const kana = fullNameKana(p);
+  return kana || '(名前未設定)';
+}
+
 /** Split an ISO date (possibly partial) into year / month / day strings. */
 export function dateParts(d?: DateInfo): { y: string; m: string; day: string } {
   const [y = '', m = '', day = ''] = (d?.iso ?? '').split('-');
