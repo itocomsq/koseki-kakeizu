@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { DateInfo, FamilyTree, Person, Sex, UnionType } from '../types/koseki';
 import { fullName, dateParts, isoFromParts } from '../types/koseki';
 import { suggestRelation } from '../lib/ops';
@@ -221,20 +221,32 @@ function PersonDetail(props: {
   );
 }
 
+// Keep the raw digits the user types in local state, so we never reformat the
+// field mid-edit (padding the ISO on every keystroke used to inject stray "0"s).
+// PersonDetail remounts on person change (key=person.id), re-seeding this state.
 function DateFields(props: { value?: DateInfo; onChange: (d: DateInfo) => void }) {
-  const { y, m, day } = dateParts(props.value);
-  const set = (ny: string, nm: string, nd: string) =>
+  const init = dateParts(props.value);
+  const unpad = (s: string) => (s === '' ? '' : String(Number(s)));
+  const [y, setY] = useState(init.y);
+  const [m, setM] = useState(unpad(init.m));
+  const [day, setDay] = useState(unpad(init.day));
+
+  const emit = (ny: string, nm: string, nd: string) =>
     props.onChange({ ...props.value, iso: isoFromParts(ny, nm, nd) });
+
+  // Allow only digits so a stray letter can't corrupt the ISO value.
+  const digits = (s: string) => s.replace(/[^0-9]/g, '');
+
   return (
     <div className="ymd">
       <input className="y" inputMode="numeric" placeholder="年" value={y}
-        onChange={(e) => set(e.target.value, m, day)} />
+        onChange={(e) => { const v = digits(e.target.value); setY(v); emit(v, m, day); }} />
       <span>年</span>
       <input className="md" inputMode="numeric" placeholder="月" value={m}
-        onChange={(e) => set(y, e.target.value, day)} />
+        onChange={(e) => { const v = digits(e.target.value); setM(v); emit(y, v, day); }} />
       <span>月</span>
       <input className="md" inputMode="numeric" placeholder="日" value={day}
-        onChange={(e) => set(y, m, e.target.value)} />
+        onChange={(e) => { const v = digits(e.target.value); setDay(v); emit(y, m, v); }} />
       <span>日</span>
     </div>
   );

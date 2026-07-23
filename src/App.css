@@ -124,6 +124,36 @@ body.resizing { cursor: col-resize; user-select: none; }
 .zoom-bar button { border: none; padding: 4px 10px; border-radius: 7px; }
 .zoom-bar .zoom-val { min-width: 54px; font-variant-numeric: tabular-nums; }
 
+/* ---- mobile / narrow screens ---- */
+@media (max-width: 820px) {
+  .app { height: 100dvh; }
+
+  /* Stack the tree on top and the editor below, each full width. */
+  .workspace { flex-direction: column; }
+  .resizer { display: none; }
+  .tree-pane { flex: none; height: 50dvh; }
+  .editor-pane {
+    width: 100% !important;      /* override the inline resize width */
+    min-width: 0;
+    flex: 1 1 auto; min-height: 0;
+    border-top: 1px solid #e2e5e9;
+  }
+
+  /* Toolbar: let the action buttons scroll horizontally instead of pushing
+     the workspace off-screen. */
+  .toolbar { gap: 8px; padding: 8px 10px; flex-wrap: nowrap; }
+  .actions {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .actions button, .actions .root-select { flex: none; white-space: nowrap; }
+  .actions .spacer { display: none; }
+
+  .zoom-bar { right: 10px; bottom: 10px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .grid2 .span2 { grid-column: 1; }
+}
+
 /* Sticky-note look: gender-tinted body + matching border. */
 .node.sex-male    { background: #e8f1fb; border-color: #4a86d6; }
 .node.sex-female  { background: #fbeaf0; border-color: #d06699; }
