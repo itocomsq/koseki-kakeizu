@@ -203,6 +203,36 @@ export function deleteUnion(tree: FamilyTree, id: string): FamilyTree {
   return { ...tree, unions: tree.unions.filter((u) => u.id !== id) };
 }
 
+const KANJI_ORD = ['長', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+function ordinal(n: number): string {
+  return KANJI_ORD[n - 1] ?? String(n);
+}
+
+/**
+ * Suggest a 続柄 (e.g. 長男 / 二女) from the family tree: the person's rank among
+ * same-sex siblings in their parent union, ordered by birth date. Returns '' when
+ * it cannot be determined (no parents, or unknown sex). The field stays free-text;
+ * this is only a suggestion the user may apply.
+ */
+export function suggestRelation(tree: FamilyTree, personId: string): string {
+  const person = tree.persons.find((p) => p.id === personId);
+  if (!person || person.sex === 'unknown') return '';
+
+  const parentUnion = tree.unions.find((u) => u.childIds.includes(personId));
+  if (!parentUnion) return '';
+
+  const key = (id: string) =>
+    tree.persons.find((p) => p.id === id)?.birth?.iso || '9999';
+  const orderedSameSex = parentUnion.childIds
+    .map((id) => tree.persons.find((p) => p.id === id))
+    .filter((p): p is Person => !!p && p.sex === person.sex)
+    .sort((a, b) => (key(a.id) < key(b.id) ? -1 : key(a.id) > key(b.id) ? 1 : 0));
+
+  const rank = orderedSameSex.findIndex((p) => p.id === personId);
+  if (rank < 0) return '';
+  return `${ordinal(rank + 1)}${person.sex === 'male' ? '男' : '女'}`;
+}
+
 export function removeChild(
   tree: FamilyTree,
   unionId: string,

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import './App.css';
 import type { FamilyTree, Person, Union } from './types/koseki';
 import { emptyTree, fullName } from './types/koseki';
@@ -32,6 +33,7 @@ export default function App() {
   const [selectedId, setSelectedId] = useState<string | undefined>(undefined);
   const [rootId, setRootId] = useState<string | undefined>(undefined);
   const [zoom, setZoom] = useState(1);
+  const [editorWidth, setEditorWidth] = useState(420);
   const [message, setMessage] = useState<string | null>(null);
   const [showMermaid, setShowMermaid] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -107,6 +109,24 @@ export default function App() {
   const mermaidText = useMemo(() => exportMermaid(tree), [tree]);
 
   const clampZoom = (z: number) => Math.min(2, Math.max(0.3, Math.round(z * 100) / 100));
+
+  // Drag the divider to resize the editor pane (min width enforced).
+  const startResize = (e: ReactPointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = editorWidth;
+    const onMove = (ev: PointerEvent) => {
+      setEditorWidth(Math.min(760, Math.max(300, startW + (startX - ev.clientX))));
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      document.body.classList.remove('resizing');
+    };
+    document.body.classList.add('resizing');
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   return (
     <div className="app">
@@ -197,7 +217,8 @@ export default function App() {
             />
           )}
         </section>
-        <aside className="editor-pane">
+        <div className="resizer" onPointerDown={startResize} title="ドラッグで幅を調整" />
+        <aside className="editor-pane" style={{ width: editorWidth }}>
           <Editor
             tree={tree}
             selectedId={selectedId}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { DateInfo, FamilyTree, Person, Sex, UnionType } from '../types/koseki';
 import { fullName, dateParts, isoFromParts } from '../types/koseki';
+import { suggestRelation } from '../lib/ops';
 import type { EditorActions } from '../lib/actions';
 
 interface Props {
@@ -28,16 +29,30 @@ export function Editor({ tree, selectedId, onSelect, actions }: Props) {
 
   return (
     <div className="editor">
-      <div className="editor-section">
+      {/* Essential editing first */}
+      {selected ? (
+        <PersonDetail
+          key={selected.id}
+          tree={tree}
+          person={selected}
+          personName={personName}
+          actions={actions}
+          onSelect={onSelect}
+        />
+      ) : (
+        <div className="editor-section muted">
+          下の一覧から人物を選ぶか、追加してください。
+        </div>
+      )}
+
+      {/* Person list is reference info → keep it at the bottom */}
+      <div className="editor-section person-list-section">
         <div className="editor-head">
           <h2>人物一覧 ({tree.persons.length})</h2>
           <button type="button" onClick={actions.addStandalone} title="どこにもつながらない人物を作成">
             ＋ 単独で追加
           </button>
         </div>
-        <p className="muted small">
-          人物を選ぶと、家系図上（上=親／左右=配偶者／下=子）とここの「＋」で家族を増やせます。
-        </p>
         <ul className="person-list">
           {tree.persons.map((p) => (
             <li key={p.id}>
@@ -53,21 +68,6 @@ export function Editor({ tree, selectedId, onSelect, actions }: Props) {
           ))}
         </ul>
       </div>
-
-      {selected ? (
-        <PersonDetail
-          key={selected.id}
-          tree={tree}
-          person={selected}
-          personName={personName}
-          actions={actions}
-          onSelect={onSelect}
-        />
-      ) : (
-        <div className="editor-section muted">
-          人物を選ぶと、ここで編集と家族の追加ができます。
-        </div>
-      )}
     </div>
   );
 }
@@ -85,6 +85,7 @@ function PersonDetail(props: {
   const myUnions = tree.unions.filter((u) => u.partnerIds.includes(person.id));
   const parentUnion = tree.unions.find((u) => u.childIds.includes(person.id));
   const canAddParent = actions.canAddParent(person.id);
+  const relationSuggestion = suggestRelation(tree, person.id);
 
   return (
     <div className="editor-section detail">
@@ -95,15 +96,7 @@ function PersonDetail(props: {
         </button>
       </div>
 
-      <div className="add-family">
-        {canAddParent && (
-          <button type="button" onClick={() => actions.addParent(person.id)}>＋ 父母</button>
-        )}
-        <button type="button" onClick={() => actions.addSibling(person.id)}>＋ 兄弟姉妹</button>
-        <button type="button" onClick={() => actions.addSpouse(person.id)}>＋ 配偶者</button>
-        <button type="button" onClick={() => actions.addChild(person.id)}>＋ 子</button>
-      </div>
-
+      {/* Essential inputs */}
       <div className="grid2">
         <label>氏
           <input value={person.familyName ?? ''} onChange={(e) => change({ familyName: e.target.value })} />
@@ -121,6 +114,13 @@ function PersonDetail(props: {
         <label>続柄
           <input value={person.relationInRegister ?? ''} placeholder="長男 / 妻 など"
             onChange={(e) => change({ relationInRegister: e.target.value })} />
+          {relationSuggestion && relationSuggestion !== person.relationInRegister && (
+            <button type="button" className="suggest"
+              title="生年と家系図から推定。クリックで入力"
+              onClick={() => change({ relationInRegister: relationSuggestion })}>
+              候補: {relationSuggestion}
+            </button>
+          )}
         </label>
 
         <div className="span2 datefield">
@@ -141,6 +141,16 @@ function PersonDetail(props: {
         </label>
       </div>
 
+      {/* Grow the tree */}
+      <div className="add-family">
+        {canAddParent && (
+          <button type="button" onClick={() => actions.addParent(person.id)}>＋ 父母</button>
+        )}
+        <button type="button" onClick={() => actions.addSibling(person.id)}>＋ 兄弟姉妹</button>
+        <button type="button" onClick={() => actions.addSpouse(person.id)}>＋ 配偶者</button>
+        <button type="button" onClick={() => actions.addChild(person.id)}>＋ 子</button>
+      </div>
+
       {/* Parents */}
       <h3>親</h3>
       {parentUnion ? (
@@ -151,7 +161,7 @@ function PersonDetail(props: {
           </button>
         </p>
       ) : (
-        <p className="muted small">未設定。「＋父・母」で追加できます。</p>
+        <p className="muted small">未設定。「＋父母」で追加できます。</p>
       )}
 
       {/* Spouses & children */}
