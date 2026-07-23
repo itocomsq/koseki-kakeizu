@@ -2,8 +2,8 @@
 // No external CSS/fonts: everything needed is inlined so a downloaded .svg opens
 // correctly anywhere.
 
-import type { FamilyTree } from '../types/koseki';
-import { fullName, fullNameKana, formatDate } from '../types/koseki';
+import type { FamilyTree, Person } from '../types/koseki';
+import { fullName, formatDate } from '../types/koseki';
 import { BOX_W, BOX_H, type Layout } from './layout';
 
 const PAD = 40;
@@ -29,6 +29,59 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+// Vertical advance (px) per glyph, used to stack the 氏 block above the 名 block
+// and to keep each part's furigana aligned to its own kanji.
+const NAME_LH = 19; // 18px name + letter-spacing
+const KANA_ONLY_LH = 14;
+const PART_GAP = 4;
+
+/**
+ * Render the (vertical) name area for a person. Furigana is drawn as its own
+ * short column beside *each* name part (氏 / 名) rather than one column beside
+ * the whole name, so readings line up with their kanji. Parts with no kanji fall
+ * back to a muted kana-only column.
+ */
+function nameArea(p: Person, cx: number, yTop: number): string {
+  const anyKana = !!(p.familyNameKana || p.givenNameKana);
+  const nameX = anyKana ? cx - 6 : cx; // shift kanji left to make room for ruby
+  const kanaX = cx + 11;
+
+  const parts: Array<{ kanji?: string; kana?: string }> = [
+    { kanji: p.familyName, kana: p.familyNameKana },
+    { kanji: p.givenName, kana: p.givenNameKana },
+  ];
+
+  const out: string[] = [];
+  let cur = yTop;
+  let rendered = false;
+
+  for (const part of parts) {
+    if (part.kanji) {
+      out.push(
+        `<text x="${nameX.toFixed(1)}" y="${cur.toFixed(1)}" class="name">${esc(part.kanji)}</text>`,
+      );
+      if (part.kana) {
+        out.push(
+          `<text x="${kanaX.toFixed(1)}" y="${cur.toFixed(1)}" class="kana">${esc(part.kana)}</text>`,
+        );
+      }
+      cur += [...part.kanji].length * NAME_LH + PART_GAP;
+      rendered = true;
+    } else if (part.kana) {
+      out.push(
+        `<text x="${cx.toFixed(1)}" y="${cur.toFixed(1)}" class="kana-only">${esc(part.kana)}</text>`,
+      );
+      cur += [...part.kana].length * KANA_ONLY_LH + PART_GAP;
+      rendered = true;
+    }
+  }
+
+  if (!rendered) {
+    out.push(`<text x="${cx.toFixed(1)}" y="${yTop.toFixed(1)}" class="name">${esc(fullName(p))}</text>`);
+  }
+  return out.join('\n      ');
+}
+
 export function exportSvg(layout: Layout, tree: FamilyTree): string {
   const w = layout.width + PAD * 2;
   const h = layout.height + PAD * 2;
@@ -47,9 +100,6 @@ export function exportSvg(layout: Layout, tree: FamilyTree): string {
       const x = n.left + PAD;
       const y = n.top + PAD;
       const sex = p.sex;
-      const name = esc(fullName(p));
-      const kana = esc(fullNameKana(p));
-      const hasKanji = !!(p.familyName || p.givenName);
       const birth = esc(formatDate(p.birth));
       const death = esc(formatDate(p.death));
       const rel = p.relationInRegister ? esc(p.relationInRegister) : '';
@@ -72,16 +122,7 @@ export function exportSvg(layout: Layout, tree: FamilyTree): string {
         fill="${FILL[sex]}" stroke="${STROKE[sex]}" stroke-width="1.25" />
       <rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${BOX_W}" height="4" rx="2" fill="${STROKE[sex]}" />
       ${rel ? `<text x="${cx.toFixed(1)}" y="${(y + 18).toFixed(1)}" class="rel" text-anchor="middle">${rel}</text>` : ''}
-      ${
-        hasKanji
-          ? `<text x="${(kana ? cx - 6 : cx).toFixed(1)}" y="${(y + 26).toFixed(1)}" class="name">${name}</text>` +
-            (kana
-              ? `\n      <text x="${(cx + 11).toFixed(1)}" y="${(y + 26).toFixed(1)}" class="kana">${kana}</text>`
-              : '')
-          : kana
-            ? `<text x="${cx.toFixed(1)}" y="${(y + 26).toFixed(1)}" class="kana-only">${kana}</text>`
-            : `<text x="${cx.toFixed(1)}" y="${(y + 26).toFixed(1)}" class="name">${name}</text>`
-      }
+      ${nameArea(p, cx, y + 26)}
       ${dateSvg}
     </g>`;
     })
